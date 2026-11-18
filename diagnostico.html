@@ -122,6 +122,13 @@ h4 { font-family: var(--font-display); font-size: 14px; text-transform: uppercas
 .status { font-size: 13px; color: var(--muted); }
 #fallback { width: 100%; min-height: 150px; font-family: var(--font-data); font-size: 12px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
 #fallback[hidden] { display: none; }
+.send { border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 10px; }
+.consent { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--muted); }
+.consent input { margin-top: 3px; flex: none; }
+.status.ok { color: var(--ok); }
+.status.err { color: var(--warn); }
+button:disabled { opacity: .6; cursor: not-allowed; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 @media (prefers-reduced-motion: no-preference) { .verdict { transition: background-color .2s, color .2s; } }
 </style>
 
@@ -241,8 +248,22 @@ h4 { font-family: var(--font-display); font-size: 14px; text-transform: uppercas
         <ul class="plain" id="rsteps"></ul>
       </div>
       <p class="fine">Triagem informativa com base nas respostas e na LC 214/2025 (arts. 251 a 261). Não substitui a orientação do contador do proprietário.</p>
+      <div class="send">
+        <div class="hp" aria-hidden="true">
+          <label for="website">Não preencha este campo</label>
+          <input type="text" id="website" tabindex="-1" autocomplete="off">
+        </div>
+        <label class="consent">
+          <input type="checkbox" id="consent">
+          <span>Autorizo a GMA Imobiliária a guardar estas respostas para atendimento e acompanhamento.</span>
+        </label>
+        <div class="actions">
+          <button type="button" class="primary" id="send">Enviar à GMA</button>
+          <span class="status" id="sendstatus" role="status"></span>
+        </div>
+      </div>
       <div class="actions">
-        <button type="button" class="primary" id="copy">Copiar relatório</button>
+        <button type="button" class="ghost" id="copy">Copiar relatório</button>
         <span class="status" id="copystatus" role="status"></span>
       </div>
       <textarea id="fallback" readonly hidden aria-label="Texto do relatório"></textarea>
@@ -390,10 +411,14 @@ h4 { font-family: var(--font-display); font-size: 14px; text-transform: uppercas
 
   var CHIP = { met: 'Atingido', near: 'Perto', no: 'Não atingido' };
   var last = '';
+  var current = null;
+  // Cole aqui a URL do Web App do Apps Script (termina em /exec)
+  var URL_ENVIO = 'COLE_AQUI_A_URL_DO_APPS_SCRIPT';
 
   function render() {
     var d = read();
     var r = evaluate(d);
+    current = { d: d, r: r };
     var today = new Date().toLocaleDateString('pt-BR');
     var tipoTxt = d.tipo === 'pj' ? 'Empresa ou holding' : 'Pessoa física';
 
@@ -458,7 +483,10 @@ h4 { font-family: var(--font-display); font-size: 14px; text-transform: uppercas
 
   var sample = $('sample');
   function hideSample() { sample.hidden = true; }
-  $('f').addEventListener('input', function () { hideSample(); render(); });
+  $('f').addEventListener('input', function () {
+    hideSample(); render();
+    $('send').disabled = false; $('sendstatus').textContent = '';
+  });
   $('f').addEventListener('change', render);
   $('f').addEventListener('submit', function (e) { e.preventDefault(); });
 
@@ -466,6 +494,37 @@ h4 { font-family: var(--font-display); font-size: 14px; text-transform: uppercas
     ['nome', 'imoveis', 'rec25', 'rec26', 'v25', 'v26', 'constr'].forEach(function (id) { $(id).value = ''; });
     $('tipo-pf').checked = true; $('uso-res').checked = true; $('opc-nao').checked = true;
     hideSample(); render(); $('nome').focus();
+  });
+
+  $('send').addEventListener('click', function () {
+    var st = $('sendstatus'), btn = $('send');
+    var say = function (msg, cls) { st.textContent = msg; st.className = 'status' + (cls ? ' ' + cls : ''); };
+
+    if (!sample.hidden) { say('Substitua os dados de exemplo antes de enviar.', 'err'); return; }
+    if (!current.d.nome) { say('Informe o nome do proprietário.', 'err'); return; }
+    if (!$('consent').checked) { say('Marque a autorização para enviar.', 'err'); return; }
+    if (URL_ENVIO.indexOf('http') !== 0) { say('Envio ainda não configurado.', 'err'); return; }
+
+    var d = current.d, r = current.r;
+    var payload = {
+      nome: d.nome, tipo: d.tipo, uso: d.uso, imoveis: d.imoveis,
+      rec25: d.rec25, rec26: d.rec26, v25: d.v25, v26: d.v26,
+      constr: d.constr, opcao: d.opcao, limite: d.limite,
+      resultado: r.headline,
+      criterios: r.crit.filter(function (c) { return c.state === 'met'; })
+                       .map(function (c) { return c.name; }).join('; '),
+      website: $('website').value
+    };
+
+    btn.disabled = true; say('Enviando...');
+    // Sem header Content-Type: evita o preflight de CORS no Apps Script
+    fetch(URL_ENVIO, { method: 'POST', body: JSON.stringify(payload) })
+      .then(function (resp) { return resp.json(); })
+      .then(function (j) {
+        if (j && j.ok) { say('Enviado. Obrigado!', 'ok'); }
+        else { btn.disabled = false; say('Não foi possível enviar. Tente de novo.', 'err'); }
+      })
+      .catch(function () { btn.disabled = false; say('Falha de conexão. Tente de novo.', 'err'); });
   });
 
   $('copy').addEventListener('click', function () {
