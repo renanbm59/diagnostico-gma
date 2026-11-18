@@ -1,0 +1,488 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Diagnóstico de Enquadramento</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Schibsted+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: formulário à esquerda, relatório vivo à direita; empilha no celular. */
+:root {
+  --bg: #F3F6F6;
+  --surface: #FFFFFF;
+  --ink: #11262B;
+  --muted: #53676C;
+  --line: #D6E0E1;
+  --accent: #0E5C63;
+  --accent-ink: #FFFFFF;
+  --soft: #E8F0F0;
+  --ok: #19693F;
+  --ok-bg: #E2F3E9;
+  --warn: #8A4B05;
+  --warn-bg: #FCEFD6;
+  --info: #1B4F8F;
+  --info-bg: #E3EDFA;
+  --focus: #1B6FD1;
+  --font-display: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1A1D; --surface: #15262A; --ink: #E6EFF0; --muted: #9DB2B6; --line: #2A4045;
+    --accent: #5FC2CA; --accent-ink: #082326; --soft: #1C3338;
+    --ok: #6FD39A; --ok-bg: #163626; --warn: #F2B866; --warn-bg: #3A2B12;
+    --info: #8DB8F0; --info-bg: #172D4A; --focus: #7DB4FF;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1A1D; --surface: #15262A; --ink: #E6EFF0; --muted: #9DB2B6; --line: #2A4045;
+  --accent: #5FC2CA; --accent-ink: #082326; --soft: #1C3338;
+  --ok: #6FD39A; --ok-bg: #163626; --warn: #F2B866; --warn-bg: #3A2B12;
+  --info: #8DB8F0; --info-bg: #172D4A; --focus: #7DB4FF;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-block: 28px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 24px; }
+header .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(24px, 4vw, 34px); line-height: 1.15; margin: 0 0 8px; text-wrap: balance; }
+header p.lead { margin: 0; color: var(--muted); max-width: 62ch; }
+.sample { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between;
+  background: var(--info-bg); color: var(--info); border: 1px solid var(--info); border-radius: 6px; padding: 10px 14px; font-size: 14px; }
+.sample[hidden] { display: none; }
+.cols { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 920px) { .cols { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); } }
+form { display: grid; gap: 16px; min-width: 0; }
+fieldset { margin: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 16px; min-width: 0; display: grid; gap: 14px; }
+fieldset[hidden] { display: none; }
+legend { font-family: var(--font-display); font-weight: 600; font-size: 16px; padding: 0 6px; margin-left: -6px; }
+.grid { display: grid; gap: 14px 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); }
+.field { display: grid; gap: 4px; min-width: 0; align-content: start; }
+.field > label, .field > .lbl { font-weight: 500; font-size: 14px; }
+.hint { font-size: 12.5px; color: var(--muted); margin: 0; }
+input[type=text], input[type=number] {
+  width: 100%; min-width: 0; font: inherit; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px;
+}
+.money { position: relative; }
+.money span { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-family: var(--font-data); font-size: 13px; pointer-events: none; }
+.money input { padding-left: 34px; font-family: var(--font-data); }
+input[type=number].mono { font-family: var(--font-data); }
+input:focus-visible, .seg input:focus-visible + label, button:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--focus); outline-offset: 2px;
+}
+.seg { position: relative; display: flex; flex-wrap: wrap; gap: 6px; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 8px 12px; cursor: pointer; font-size: 14px; }
+.seg input:checked + label { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 500; }
+details summary { cursor: pointer; font-size: 14px; color: var(--muted); }
+details .field { margin-top: 10px; }
+button { font: inherit; cursor: pointer; border-radius: 6px; padding: 9px 14px; border: 1px solid var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-ink); font-weight: 500; }
+button.ghost { background: transparent; color: inherit; border-color: currentColor; }
+
+/* Relatório */
+.report { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 22px; min-width: 0; display: grid; gap: 20px; }
+.rhead { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+.rhead h2 { font-family: var(--font-display); font-size: 15px; font-weight: 600; margin: 0; text-transform: uppercase; letter-spacing: .06em; }
+.rhead .meta { font-family: var(--font-data); font-size: 12.5px; color: var(--muted); }
+.owner { margin: 0; color: var(--muted); font-size: 14px; }
+.owner strong { color: var(--ink); font-weight: 600; }
+.verdict { border-radius: 8px; padding: 16px 18px; display: grid; gap: 6px; border: 1px solid transparent; }
+.verdict .tag { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
+.verdict h3 { font-family: var(--font-display); font-size: clamp(20px, 3vw, 24px); line-height: 1.2; margin: 0; text-wrap: balance; }
+.verdict p { margin: 0; font-size: 14.5px; }
+.verdict.contrib { background: var(--warn-bg); color: var(--warn); border-color: var(--warn); }
+.verdict.near { background: var(--info-bg); color: var(--info); border-color: var(--info); }
+.verdict.free { background: var(--ok-bg); color: var(--ok); border-color: var(--ok); }
+.verdict.empty { background: var(--soft); color: var(--muted); border-color: var(--line); }
+.verdict p { color: var(--ink); }
+h4 { font-family: var(--font-display); font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+.crit { list-style: none; margin: 0; padding: 0; display: grid; }
+.crit li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 10px 0; border-top: 1px solid var(--line); align-items: start; }
+.crit li:first-child { border-top: 0; }
+.crit .name { font-weight: 500; }
+.crit .ref { font-family: var(--font-data); font-size: 12px; color: var(--muted); margin-left: 6px; }
+.crit .vals { grid-column: 1; font-size: 13px; color: var(--muted); }
+.crit .vals b { font-family: var(--font-data); font-weight: 500; color: var(--ink); }
+.chip { grid-column: 2; grid-row: 1 / span 2; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 99px; border: 1px solid; white-space: nowrap; }
+.chip.met { color: var(--warn); background: var(--warn-bg); border-color: var(--warn); }
+.chip.near { color: var(--info); background: var(--info-bg); border-color: var(--info); }
+.chip.no { color: var(--muted); background: transparent; border-color: var(--line); }
+.report ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.fine { font-size: 12.5px; color: var(--muted); margin: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.status { font-size: 13px; color: var(--muted); }
+#fallback { width: 100%; min-height: 150px; font-family: var(--font-data); font-size: 12px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
+#fallback[hidden] { display: none; }
+@media (prefers-reduced-motion: no-preference) { .verdict { transition: background-color .2s, color .2s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">GMA Imobiliária · Reforma Tributária</p>
+    <h1>Diagnóstico de enquadramento do proprietário</h1>
+    <p class="lead">Responda às perguntas e o relatório ao lado mostra se o proprietário passa a ser contribuinte de IBS e CBS, com base no art. 251 da LC 214/2025.</p>
+  </header>
+
+  <div class="sample" id="sample">
+    <span>Você está vendo dados de exemplo. Apague-os antes de preencher com os dados do proprietário.</span>
+    <button type="button" class="ghost" id="clear">Limpar e preencher</button>
+  </div>
+
+  <div class="cols">
+    <form id="f" autocomplete="off" novalidate>
+      <fieldset>
+        <legend>Proprietário</legend>
+        <div class="field">
+          <label for="nome">Nome ou razão social</label>
+          <input type="text" id="nome" value="Maria Souza (exemplo)">
+        </div>
+        <div class="field">
+          <span class="lbl" id="tipo-l">Como os imóveis estão registrados?</span>
+          <div class="seg" role="radiogroup" aria-labelledby="tipo-l">
+            <input type="radio" id="tipo-pf" name="tipo" value="pf" checked><label for="tipo-pf">Pessoa física</label>
+            <input type="radio" id="tipo-pj" name="tipo" value="pj"><label for="tipo-pj">Empresa ou holding</label>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset id="bloco-loc">
+        <legend>Locação</legend>
+        <div class="grid">
+          <div class="field">
+            <label for="imoveis">Imóveis alugados hoje</label>
+            <input type="number" class="mono" id="imoveis" min="0" step="1" inputmode="numeric" value="4">
+            <p class="hint">Conte todos, inclusive os que outra administradora cuida.</p>
+          </div>
+          <div class="field">
+            <span class="lbl" id="uso-l">Tipo dos imóveis</span>
+            <div class="seg" role="radiogroup" aria-labelledby="uso-l">
+              <input type="radio" id="uso-res" name="uso" value="res" checked><label for="uso-res">Residencial</label>
+              <input type="radio" id="uso-com" name="uso" value="com"><label for="uso-com">Comercial</label>
+              <input type="radio" id="uso-mix" name="uso" value="mix"><label for="uso-mix">Ambos</label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="rec25">Receita bruta de aluguéis em 2025</label>
+            <div class="money"><span>R$</span><input type="number" id="rec25" min="0" step="1000" inputmode="numeric" value="210000"></div>
+            <p class="hint">Soma de todos os imóveis, antes de descontos.</p>
+          </div>
+          <div class="field">
+            <label for="rec26">Receita estimada de aluguéis em 2026</label>
+            <div class="money"><span>R$</span><input type="number" id="rec26" min="0" step="1000" inputmode="numeric" value="220000"></div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset id="bloco-ven">
+        <legend>Vendas</legend>
+        <div class="grid">
+          <div class="field">
+            <label for="v25">Imóveis vendidos em 2025</label>
+            <input type="number" class="mono" id="v25" min="0" step="1" inputmode="numeric" value="0">
+            <p class="hint">Só os que estavam com o proprietário há menos de 5 anos.</p>
+          </div>
+          <div class="field">
+            <label for="v26">Imóveis vendidos em 2026 até agora</label>
+            <input type="number" class="mono" id="v26" min="0" step="1" inputmode="numeric" value="0">
+          </div>
+          <div class="field">
+            <label for="constr">Imóveis construídos por ele e vendidos nos últimos 5 anos</label>
+            <input type="number" class="mono" id="constr" min="0" step="1" inputmode="numeric" value="0">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset id="bloco-opc">
+        <legend>Regime regular</legend>
+        <div class="field">
+          <span class="lbl" id="opc-l">O proprietário já optou pelo regime regular de IBS e CBS?</span>
+          <div class="seg" role="radiogroup" aria-labelledby="opc-l">
+            <input type="radio" id="opc-nao" name="opcao" value="nao" checked><label for="opc-nao">Não</label>
+            <input type="radio" id="opc-sim" name="opcao" value="sim"><label for="opc-sim">Sim</label>
+          </div>
+        </div>
+        <details>
+          <summary>Parâmetros da lei</summary>
+          <div class="field">
+            <label for="limite">Limite anual de receita de locação</label>
+            <div class="money"><span>R$</span><input type="number" id="limite" min="0" step="1000" inputmode="numeric" value="240000"></div>
+            <p class="hint">A lei fixa R$ 240.000 e manda corrigir pelo IPCA. Atualize aqui com o valor vigente. O limite do próprio ano é 120% desse valor.</p>
+          </div>
+        </details>
+      </fieldset>
+    </form>
+
+    <section class="report" id="report" aria-live="polite">
+      <div class="rhead">
+        <h2>Relatório de enquadramento</h2>
+        <span class="meta" id="rdate"></span>
+      </div>
+      <p class="owner" id="rowner"></p>
+      <div class="verdict" id="verdict"></div>
+      <div id="rcrit-wrap">
+        <h4>Critérios verificados</h4>
+        <ul class="crit" id="rcrit"></ul>
+      </div>
+      <div>
+        <h4>O que isso significa</h4>
+        <ul class="plain" id="reffects"></ul>
+      </div>
+      <div>
+        <h4>Próximos passos</h4>
+        <ul class="plain" id="rsteps"></ul>
+      </div>
+      <p class="fine">Triagem informativa com base nas respostas e na LC 214/2025 (arts. 251 a 261). Não substitui a orientação do contador do proprietário.</p>
+      <div class="actions">
+        <button type="button" class="primary" id="copy">Copiar relatório</button>
+        <span class="status" id="copystatus" role="status"></span>
+      </div>
+      <textarea id="fallback" readonly hidden aria-label="Texto do relatório"></textarea>
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var brl = function (n) { return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }); };
+  var num = function (id) { var v = parseFloat($(id).value); return isFinite(v) && v > 0 ? v : 0; };
+  var radio = function (name) { return document.querySelector('input[name="' + name + '"]:checked').value; };
+  var plural = function (n, s, p) { return n + ' ' + (n === 1 ? s : p); };
+
+  function read() {
+    return {
+      nome: $('nome').value.trim(),
+      tipo: radio('tipo'),
+      uso: radio('uso'),
+      imoveis: Math.floor(num('imoveis')),
+      rec25: num('rec25'),
+      rec26: num('rec26'),
+      v25: Math.floor(num('v25')),
+      v26: Math.floor(num('v26')),
+      constr: Math.floor(num('constr')),
+      opcao: radio('opcao') === 'sim',
+      limite: num('limite') || 240000
+    };
+  }
+
+  function evaluate(d) {
+    var L = d.limite, L2 = L * 1.2;
+    var res = { crit: [], effects: [], steps: [] };
+
+    if (d.tipo === 'pj') {
+      res.status = 'contrib';
+      res.tag = 'Contribuinte';
+      res.headline = 'Empresa: contribuinte no regime regular';
+      res.sub = 'Como regra geral, a empresa que aluga ou vende imóveis fica sujeita ao IBS e à CBS, sem piso de imóveis ou de receita.';
+      res.crit.push({ name: 'Pessoa jurídica', ref: 'Art. 251', vals: 'Informado: <b>empresa ou holding</b> · Limite: <b>não há</b>', state: 'met' });
+      res.effects = [
+        'A locação e a venda de imóveis da empresa entram no IBS e na CBS, além dos tributos sobre a renda.',
+        'A locação tem redução de 70% nas alíquotas; na locação residencial há ainda redutor social de R$ 600 por mês por imóvel.',
+        'Em 2026 as alíquotas são de teste: 0,1% de IBS e 0,9% de CBS.'
+      ];
+      res.steps = [
+        'Confirmar com o contador o regime da empresa e como a receita de aluguel entra no cálculo.',
+        'Avisar a GMA para ajustar contratos, repasses e documentos fiscais.'
+      ];
+      return res;
+    }
+
+    var met1 = d.imoveis > 3 && d.rec25 > L;
+    var near1 = !met1 && d.imoveis >= 3 && d.rec25 >= 0.8 * L;
+    var met2 = d.rec26 > L2;
+    var near2 = !met2 && d.rec26 >= 0.8 * L2;
+    var met3 = d.v25 > 3, near3 = !met3 && d.v25 === 3;
+    var met4 = d.v26 >= 4, near4 = !met4 && d.v26 === 3;
+    var met5 = d.constr > 1, near5 = !met5 && d.constr === 1;
+    var met6 = d.opcao;
+    var st = function (m, n) { return m ? 'met' : (n ? 'near' : 'no'); };
+
+    res.crit = [
+      { name: 'Locação no ano anterior', ref: 'Art. 251, §1º',
+        vals: 'Informado: <b>' + plural(d.imoveis, 'imóvel', 'imóveis') + ' · ' + brl(d.rec25) + '</b><br>Limite: <b>mais de 3 imóveis e mais de ' + brl(L) + '</b>',
+        state: st(met1, near1) },
+      { name: 'Locação no próprio ano', ref: 'Art. 251, §2º',
+        vals: 'Informado: <b>' + brl(d.rec26) + '</b><br>Limite: <b>acima de ' + brl(L2) + '</b> (120% do limite anual)',
+        state: st(met2, near2) },
+      { name: 'Vendas no ano anterior', ref: 'Art. 251, §1º',
+        vals: 'Informado: <b>' + plural(d.v25, 'imóvel', 'imóveis') + '</b><br>Limite: <b>mais de 3 imóveis</b> com menos de 5 anos no patrimônio',
+        state: st(met3, near3) },
+      { name: 'Vendas no próprio ano', ref: 'Art. 251, §2º',
+        vals: 'Informado: <b>' + plural(d.v26, 'imóvel', 'imóveis') + '</b><br>Limite: <b>a partir da 4ª venda</b> no ano',
+        state: st(met4, near4) },
+      { name: 'Imóveis construídos e vendidos', ref: 'Art. 251',
+        vals: 'Informado: <b>' + plural(d.constr, 'imóvel', 'imóveis') + '</b><br>Limite: <b>mais de 1</b> nos últimos 5 anos',
+        state: st(met5, near5) },
+      { name: 'Opção pelo regime regular', ref: 'Regime opcional',
+        vals: 'Informado: <b>' + (d.opcao ? 'optou' : 'não optou') + '</b>',
+        state: met6 ? 'met' : 'no' }
+    ];
+
+    var metCount = res.crit.filter(function (c) { return c.state === 'met'; }).length;
+    var nearCount = res.crit.filter(function (c) { return c.state === 'near'; }).length;
+    var any = d.imoveis || d.rec25 || d.rec26 || d.v25 || d.v26 || d.constr || d.opcao;
+
+    if (!any) {
+      res.status = 'empty';
+      res.tag = 'Aguardando dados';
+      res.headline = 'Preencha o formulário para ver o resultado';
+      res.sub = 'O diagnóstico aparece aqui e se atualiza a cada resposta.';
+      res.effects = ['Nenhum dado informado ainda.'];
+      res.steps = ['Informe imóveis, receita de aluguel e vendas do proprietário.'];
+      return res;
+    }
+
+    if (metCount > 0) {
+      res.status = 'contrib';
+      res.tag = 'Contribuinte';
+      res.headline = 'Enquadra-se como contribuinte de IBS e CBS';
+      res.sub = metCount === 1 ? 'Atende a 1 critério do art. 251 da LC 214/2025.' : 'Atende a ' + metCount + ' critérios do art. 251 da LC 214/2025.';
+      res.effects = [
+        'Passa a recolher IBS e CBS sobre aluguéis e vendas de imóveis, além do Imposto de Renda.',
+        'A locação tem redução de 70% nas alíquotas' + (d.uso === 'com' ? '. O redutor social de R$ 600 vale só para locação residencial.' : '; na locação residencial há ainda redutor social de R$ 600 por mês por imóvel.'),
+        'Em 2026 as alíquotas são de teste: 0,1% de IBS e 0,9% de CBS.',
+        'Pode haver obrigações acessórias, como emissão de documento fiscal. Confirmar com o contador.'
+      ];
+      res.steps = [
+        'Enviar este relatório ao contador do proprietário.',
+        'Avisar a GMA para ajustar contratos, repasses e documentos fiscais.',
+        'Conferir o limite vigente, corrigido mensalmente pelo IPCA.'
+      ];
+    } else if (nearCount > 0) {
+      res.status = 'near';
+      res.tag = 'Atenção';
+      res.headline = 'Não se enquadra hoje, mas está perto de um limite';
+      res.sub = nearCount === 1 ? '1 critério está próximo de ser atingido.' : nearCount + ' critérios estão próximos de serem atingidos.';
+      res.effects = [
+        'Por enquanto segue apenas com o Imposto de Renda sobre aluguéis e ganhos de capital.',
+        'Se ultrapassar o limite, passa a ser contribuinte. No caso da receita de locação, isso pode ocorrer no próprio ano, acima de ' + brl(L2) + '.'
+      ];
+      res.steps = [
+        'Acompanhar a receita de aluguel e o número de imóveis ao longo de 2026.',
+        'Falar com o contador antes de comprar, vender ou reajustar de modo que cruze o limite.',
+        'Refazer este diagnóstico a cada mudança.'
+      ];
+    } else {
+      res.status = 'free';
+      res.tag = 'Não contribuinte';
+      res.headline = 'Não se enquadra como contribuinte';
+      res.sub = 'Nenhum dos critérios do art. 251 da LC 214/2025 foi atingido.';
+      res.effects = [
+        'Continua tributado apenas pelo Imposto de Renda, enquanto ficar abaixo dos limites.',
+        'A lei prevê a opção pelo regime regular; vale simular com o contador antes de decidir.'
+      ];
+      res.steps = [
+        'Guardar este relatório no cadastro do proprietário.',
+        'Refazer o diagnóstico se mudar o número de imóveis, a receita ou as vendas.'
+      ];
+    }
+    return res;
+  }
+
+  var CHIP = { met: 'Atingido', near: 'Perto', no: 'Não atingido' };
+  var last = '';
+
+  function render() {
+    var d = read();
+    var r = evaluate(d);
+    var today = new Date().toLocaleDateString('pt-BR');
+    var tipoTxt = d.tipo === 'pj' ? 'Empresa ou holding' : 'Pessoa física';
+
+    $('bloco-loc').hidden = $('bloco-ven').hidden = $('bloco-opc').hidden = (d.tipo === 'pj');
+    $('rdate').textContent = today + ' · GMA Imobiliária';
+    $('rowner').innerHTML = '';
+    var strong = document.createElement('strong');
+    strong.textContent = d.nome || 'Nome não informado';
+    $('rowner').appendChild(strong);
+    $('rowner').appendChild(document.createTextNode(' · ' + tipoTxt));
+
+    var v = $('verdict');
+    v.className = 'verdict ' + r.status;
+    v.innerHTML = '';
+    var tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = r.tag;
+    var h = document.createElement('h3'); h.textContent = r.headline;
+    var p = document.createElement('p'); p.textContent = r.sub;
+    v.appendChild(tag); v.appendChild(h); v.appendChild(p);
+
+    var ul = $('rcrit'); ul.innerHTML = '';
+    r.crit.forEach(function (c) {
+      var li = document.createElement('li');
+      var nm = document.createElement('div'); nm.className = 'name';
+      nm.appendChild(document.createTextNode(c.name));
+      var rf = document.createElement('span'); rf.className = 'ref'; rf.textContent = c.ref;
+      nm.appendChild(rf);
+      var vals = document.createElement('div'); vals.className = 'vals'; vals.innerHTML = c.vals;
+      var chip = document.createElement('span'); chip.className = 'chip ' + c.state; chip.textContent = CHIP[c.state];
+      li.appendChild(nm); li.appendChild(vals); li.appendChild(chip);
+      ul.appendChild(li);
+    });
+    $('rcrit-wrap').hidden = r.status === 'empty';
+
+    var fill = function (id, items) {
+      var el = $(id); el.innerHTML = '';
+      items.forEach(function (t) { var li = document.createElement('li'); li.textContent = t; el.appendChild(li); });
+    };
+    fill('reffects', r.effects);
+    fill('rsteps', r.steps);
+
+    var plainCrit = r.crit.map(function (c) {
+      return '- ' + c.name + ' (' + c.ref + '): ' + CHIP[c.state] + ' | ' + c.vals.replace(/<br>/g, ' | ').replace(/<[^>]+>/g, '');
+    }).join('\n');
+    last = [
+      'RELATÓRIO DE ENQUADRAMENTO - REFORMA TRIBUTÁRIA',
+      'GMA Imobiliária · ' + today,
+      '',
+      'Proprietário: ' + (d.nome || 'Nome não informado') + ' (' + tipoTxt + ')',
+      'Resultado: ' + r.headline,
+      r.sub,
+      '',
+      r.status === 'empty' ? '' : 'Critérios verificados:\n' + plainCrit + '\n',
+      'O que isso significa:',
+      r.effects.map(function (t) { return '- ' + t; }).join('\n'),
+      '',
+      'Próximos passos:',
+      r.steps.map(function (t) { return '- ' + t; }).join('\n'),
+      '',
+      'Triagem informativa com base nas respostas e na LC 214/2025 (arts. 251 a 261). Não substitui a orientação do contador do proprietário.'
+    ].join('\n');
+  }
+
+  var sample = $('sample');
+  function hideSample() { sample.hidden = true; }
+  $('f').addEventListener('input', function () { hideSample(); render(); });
+  $('f').addEventListener('change', render);
+  $('f').addEventListener('submit', function (e) { e.preventDefault(); });
+
+  $('clear').addEventListener('click', function () {
+    ['nome', 'imoveis', 'rec25', 'rec26', 'v25', 'v26', 'constr'].forEach(function (id) { $(id).value = ''; });
+    $('tipo-pf').checked = true; $('uso-res').checked = true; $('opc-nao').checked = true;
+    hideSample(); render(); $('nome').focus();
+  });
+
+  $('copy').addEventListener('click', function () {
+    var status = $('copystatus'), fb = $('fallback');
+    var showFallback = function () {
+      fb.hidden = false; fb.value = last; fb.focus(); fb.select();
+      status.textContent = 'Não foi possível copiar sozinho. Selecione o texto abaixo e copie.';
+    };
+    try {
+      navigator.clipboard.writeText(last).then(function () {
+        fb.hidden = true; status.textContent = 'Relatório copiado.';
+      }, showFallback);
+    } catch (e) { showFallback(); }
+  });
+
+  render();
+})();
+</script>
+
+</body></html>
